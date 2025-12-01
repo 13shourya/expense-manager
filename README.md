@@ -1,75 +1,72 @@
-Project Overview
-This Android application was developed for COMP3025 - Mobile and Pervasive Computing Assignment 2. The app implements Firebase Authentication and Firestore database operations with a responsive UI based on Assignment 1 mockups.
+# Budget Manager
 
-Assignment Requirements Met
-Firebase Authentication (Email and Google Sign-in)
+## App Description
+Basically this applications is used for saving incomes and expenses at one place in order to calculate total expenditure. Also, we can add description for saving expenses or incomes so that we know that the where we spent the money.
 
-Firestore Database Create and Read operations
+## Upgrades Since Assignment 2
 
-Responsive UI consistent with Assignment 1 mockups
+- Upgrade 1: Secure firebase and implemented firebase security
+- Upgrade 2: Improved UI design
+- Upgrade 3: Add login or switch button
 
-Cross-device compatibility across multiple orientations
+## Before and After Screenshots
+Before(dashboard):-
+<img width="196" height="405" alt="image" src="https://github.com/user-attachments/assets/513cb4b5-fb10-4265-b0db-d1110a05acbf" />
+After(dashboard):-
+<img width="358" height="779" alt="Screenshot 2025-11-30 211922" src="https://github.com/user-attachments/assets/2461a657-66c6-429d-91a0-34ce9b3a45f4" />
+-------
+Before(add-income):-
+<img width="205" height="411" alt="image" src="https://github.com/user-attachments/assets/fc8bb5e1-ffec-42f4-8707-350a5fbfde41" />
+After(add-income):-
+<img width="381" height="714" alt="image" src="https://github.com/user-attachments/assets/e4990a99-df9a-42ab-8f0b-42f21b59c7f9" />
+--------
+Before(add-expense):-
+<img width="198" height="400" alt="image" src="https://github.com/user-attachments/assets/6796279a-fb04-4025-8aac-7f4a63e0ad34" />
+After(add-expense):-
+<img width="345" height="722" alt="image" src="https://github.com/user-attachments/assets/9f840179-580d-4e08-9a20-bcca4bfbd90b" />
+--------
+Before(Transaction history):-
+<img width="233" height="415" alt="image" src="https://github.com/user-attachments/assets/72b3a911-2527-467c-9cf0-42197c4b6ecb" />
+After(Transaction history):-
+<img width="333" height="512" alt="image" src="https://github.com/user-attachments/assets/4ae13fec-bb9a-4808-a9f7-911061daaf86" />
 
-Version control with descriptive commits
+### Assignment 2 vs Assignment 3
 
-Technical Stack
-Platform: Android
+**Before (Assignment 2):**
+in the past, the app was simple prototype in purple-white theme with basics features.
 
-Programming Language: kotlin
-
-Backend Services: Firebase
-
-Firebase Authentication
-
-Cloud Firestore
+**After (Assignment 3):**
+Now, its theme changed to cyan-white with easy-to-use features and also add some new functions as well.
 
 
-Features
-Authentication
-User registration with email and password
+## Firebase Security
+-  "Implemented Firebase Security Rules to restrict read/write access to authenticated users only"
 
-Google Sign-in integration
+## Launcher Icon
 
-Secure login and logout functionality
+- Created a custom icon using canva that represents finances"
 
-Data Management
-Create new records in Firestore database
+## Installation Instructions
+1. Download the `.apk` or `.aab` file from this submission
+2. Enable "Install from unknown sources" in Android settings
+3. Open the downloaded file to install
+4. Launch the app from your home screen
 
-Read and display data from Firestore
+## Version Control
+This project uses Git for version control with regular commits documenting each feature implementation.
 
-
-User Experience
-Responsive design working in both portrait and landscape orientations
-
-Intuitive navigation flow
-
-UI consistent with original mockups from Assignment 1
-
-Installation and Setup
-Prerequisites
-Android Studio Arctic Fox or later
-
-Android SDK API 30 or higher
-
-Google account for Firebase configuration
-
-Installation Steps
-Clone the repository:
-
-text
-git clone https://github.com/13shourya/expense-manager.git
-Open project in Android Studio:
-
-Select File -> Open -> Choose the project folder
-
-Configure Firebase:
-
-Download your google-services.json file from Firebase Console
-
-Place it in the app/ directory of the project
-
-Build and Run:
-
-Connect an Android device or start an emulator
-
-Click the Run button in Android Studio
+**Key Commits:**
+- 30-11-2025: Save current work before merge
+- 30-11-2025: Improved Transactions activity
+- 30-11-2025: Add forgot password activity
+- 30-11-2025: Add login or switch button functionality
+- 30-11-2025: Implemented firebase security
+## Technologies Used
+- Android Studio
+- Firebase Firestore
+- Java/Kotlin 
+- github
+## Developer
+Shourya Baweja
+- COMP3025 - Mobile and Pervasive Computing
+- 200596085
