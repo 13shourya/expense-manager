@@ -1,144 +1,275 @@
 package com.example.budgetmanager
 
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
+import android.widget.Button
+import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import com.example.budgetmanager.databinding.ActivityMainBinding
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
-import java.security.MessageDigest
+import com.google.firebase.firestore.FirebaseFirestore
+import java.text.NumberFormat
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityMainBinding
     private lateinit var auth: FirebaseAuth
-    private val db = Firebase.firestore
+    private lateinit var db: FirebaseFirestore
+    private lateinit var btnLogout: Button
+    private lateinit var btnSwitchAccount: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        setContentView(R.layout.activity_main)
 
-        Log.d("DEBUG", " MainActivity created")
-
+        // Initialize Firebase
         auth = FirebaseAuth.getInstance()
+        db = FirebaseFirestore.getInstance()
 
-
-        showSHA1Fingerprint()
-
+        // Check if user is logged in
         if (auth.currentUser == null) {
-            Log.d("DEBUG", " No user found, going to LoginActivity")
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
             return
         }
 
-        Log.d("DEBUG", " User is logged in: ${auth.currentUser?.uid}")
-        loadDashboardData()
+        // Initialize the new buttons
+        btnLogout = findViewById(R.id.btnLogout)
+        btnSwitchAccount = findViewById(R.id.btnSwitchAccount)
+
+        // Load user data
+        loadUserData()
         setupClickListeners()
-    }
+        setupLogoutButtons()
 
-
-    private fun showSHA1Fingerprint() {
-        try {
-            val info = packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
-            for (signature in info.signatures) {
-                val md = MessageDigest.getInstance("SHA-1")
-                md.update(signature.toByteArray())
-                val digest = md.digest()
-
-                // Convert to readable SHA-1
-                val sha1 = digest.joinToString("") { "%02X".format(it) }
-                    .chunked(2)
-                    .joinToString(":")
-
-                // Show it in Toast and Log
-                Toast.makeText(this, "SHA-1: $sha1", Toast.LENGTH_LONG).show()
-                println(" SHA-1 FOR FIREBASE: $sha1")
-                Log.d("SHA1_DEBUG", "SHA-1: $sha1")
-            }
-        } catch (e: Exception) {
-            Toast.makeText(this, "Error getting SHA1", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun setupClickListeners() {
-        binding.btnAddExpense.setOnClickListener {
-            Log.d("DEBUG", " Add Expense button clicked")
-            startActivity(Intent(this, AddExpenseActivity::class.java))
-        }
-
-        binding.btnAddIncome.setOnClickListener {
-            Log.d("DEBUG", " Add Income button clicked")
-            startActivity(Intent(this, AddIncomeActivity::class.java))
-        }
-
-        binding.btnViewHistory.setOnClickListener {
-            Log.d("DEBUG", " View History button clicked")
-            startActivity(Intent(this, HistoryActivity::class.java))
-        }
+        Log.d("MAIN", "MainActivity created - loading initial data")
     }
 
     override fun onResume() {
         super.onResume()
-        Log.d("DEBUG", " MainActivity resumed")
-        loadDashboardData()
+        Log.d("MAIN", "MainActivity resumed - refreshing data")
+        loadUserData()
     }
 
-    private fun loadDashboardData() {
-        val user = auth.currentUser ?: return
-        val userId = user.uid
+    private fun setupLogoutButtons() {
+        // Logout Button - Completely signs out
+        btnLogout.setOnClickListener {
+            showLogoutConfirmationDialog()
+        }
 
-        Log.d("DEBUG", " Starting to load dashboard data for user: $userId")
+        // Switch Account Button - Goes to login screen but keeps Firebase session option
+        btnSwitchAccount.setOnClickListener {
+            showSwitchAccountDialog()
+        }
+    }
 
-        // Load expenses
-        db.collection("expenses")
-            .whereEqualTo("userId", userId)
+    // ADD THIS METHOD - Logout Confirmation
+    private fun showLogoutConfirmationDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Logout")
+            .setMessage("Are you sure you want to logout?")
+            .setPositiveButton("Yes, Logout") { dialog, which ->
+                performLogout()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    // ADD THIS METHOD - Switch Account Dialog
+    private fun showSwitchAccountDialog() {
+        val options = arrayOf("Login with different account", "Cancel")
+
+        AlertDialog.Builder(this)
+            .setTitle("Switch Account")
+            .setItems(options) { dialog, which ->
+                when (which) {
+                    0 -> switchToDifferentAccount()
+                    // 1 is Cancel - do nothing
+                }
+            }
+            .show()
+    }
+
+    // ADD THIS METHOD - Perform Logout
+    private fun performLogout() {
+        // Show loading
+        val progressDialog = ProgressBar(this)
+        progressDialog.visibility = ProgressBar.VISIBLE
+
+        // Sign out from Firebase
+        auth.signOut()
+
+        // Delay a bit for smooth transition
+        Handler(Looper.getMainLooper()).postDelayed({
+            progressDialog.visibility = ProgressBar.GONE
+            Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show()
+
+            // Go to login screen
+            val intent = Intent(this, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+        }, 1000)
+    }
+
+    // ADD THIS METHOD - Switch to different account
+    private fun switchToDifferentAccount() {
+        Toast.makeText(this, "Please login with your new account", Toast.LENGTH_SHORT).show()
+
+        val intent = Intent(this, LoginActivity::class.java)
+        startActivity(intent)
+        finish()
+    }
+
+    private fun setupClickListeners() {
+        // Add Income button
+        findViewById<android.view.View>(R.id.cardIncome).setOnClickListener {
+            Toast.makeText(this, "Opening Add Income", Toast.LENGTH_SHORT).show()
+            try {
+                val intent = Intent(this, AddIncomeActivity::class.java)
+                startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Error opening Add Income", Toast.LENGTH_LONG).show()
+                Log.e("MAIN", "Error opening AddIncomeActivity", e)
+            }
+        }
+
+        // Add Expense button
+        findViewById<android.view.View>(R.id.cardExpense).setOnClickListener {
+            Toast.makeText(this, "Opening Add Expense", Toast.LENGTH_SHORT).show()
+            try {
+                val intent = Intent(this, AddExpenseActivity::class.java)
+                startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Error opening Add Expense", Toast.LENGTH_LONG).show()
+                Log.e("MAIN", "Error opening AddExpenseActivity", e)
+            }
+        }
+
+        // View All transactions
+        findViewById<TextView>(R.id.tvViewAll).setOnClickListener {
+            Toast.makeText(this, "Opening Transaction History", Toast.LENGTH_SHORT).show()
+            try {
+                val intent = Intent(this, TransactionHistoryActivity::class.java)
+                startActivity(intent)
+            } catch (e: Exception) {
+                Toast.makeText(this, "Error opening Transaction History", Toast.LENGTH_LONG).show()
+                Log.e("MAIN", "Error opening TransactionHistoryActivity", e)
+            }
+        }
+    }
+
+    private fun loadUserData() {
+        val userId = auth.currentUser?.uid
+        if (userId != null) {
+            Log.d("MAIN", "Loading data for user: $userId")
+            fetchTransactions(userId)
+            updateUserName()
+        } else {
+            Log.e("MAIN", "User ID is null - user not authenticated")
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
+        }
+    }
+
+    private fun fetchTransactions(userId: String) {
+        db.collection("users").document(userId).collection("transactions")
             .get()
-            .addOnSuccessListener { expensesSnapshot ->
-                Log.d("DEBUG", " Successfully loaded ${expensesSnapshot.size()} expenses")
+            .addOnSuccessListener { documents ->
+                var totalBalance = 0.0
+                var totalIncome = 0.0
                 var totalExpenses = 0.0
-                for (document in expensesSnapshot) {
-                    val amount = document.getDouble("amount") ?: 0.0
-                    totalExpenses += amount
-                    Log.d("DEBUG", " Expense: ${document.data}")
+
+                Log.d("MAIN", "Successfully fetched ${documents.size()} transactions")
+
+                if (documents.isEmpty) {
+                    Log.d("MAIN", "No transactions found for user")
+                    updateUI(totalBalance, totalIncome, totalExpenses, 0)
+                    return@addOnSuccessListener
                 }
 
-                // Load incomes
-                db.collection("incomes")
-                    .whereEqualTo("userId", userId)
-                    .get()
-                    .addOnSuccessListener { incomesSnapshot ->
-                        Log.d("DEBUG", " Successfully loaded ${incomesSnapshot.size()} incomes")
-                        var totalIncome = 0.0
-                        for (document in incomesSnapshot) {
-                            val amount = document.getDouble("amount") ?: 0.0
-                            totalIncome += amount
-                            Log.d("DEBUG", " Income: ${document.data}")
+                for (document in documents) {
+                    try {
+                        val amount = document.getDouble("amount") ?: 0.0
+                        val type = document.getString("type") ?: ""
+
+                        Log.d("MAIN", "Processing transaction: $type - $${amount}")
+
+                        when (type.lowercase()) {
+                            "income" -> {
+                                totalBalance += amount
+                                totalIncome += amount
+                            }
+                            "expense" -> {
+                                totalBalance -= amount
+                                totalExpenses += amount
+                            }
+                            else -> Log.w("MAIN", "Unknown transaction type: $type")
                         }
-
-                        val balance = totalIncome - totalExpenses
-                        Log.d("DEBUG", " Totals - Income: $$totalIncome, Expenses: $$totalExpenses, Balance: $$balance")
-
-                        // Update UI
-                        binding.tvTotalIncome.text = "$${String.format("%.2f", totalIncome)}"
-                        binding.tvTotalExpenses.text = "$${String.format("%.2f", totalExpenses)}"
-                        binding.tvBalance.text = "$${String.format("%.2f", balance)}"
-
-                        Log.d("DEBUG", " Dashboard UI updated successfully")
+                    } catch (e: Exception) {
+                        Log.e("MAIN", "Error parsing document: ${document.id}", e)
                     }
-                    .addOnFailureListener { e ->
-                        Log.e("DEBUG", " Failed to load incomes: ${e.message}")
-                        Toast.makeText(this, "Error loading incomes", Toast.LENGTH_SHORT).show()
-                    }
+                }
+
+                updateUI(totalBalance, totalIncome, totalExpenses, documents.size())
             }
             .addOnFailureListener { e ->
-                Log.e("DEBUG", " Failed to load expenses: ${e.message}")
-                Toast.makeText(this, "Error loading expenses", Toast.LENGTH_SHORT).show()
+                Log.e("MAIN", "Error fetching transactions: ", e)
+                Toast.makeText(this, "Error loading data: ${e.message}", Toast.LENGTH_SHORT).show()
+                updateUI(0.0, 0.0, 0.0, 0)
             }
+    }
+
+    private fun updateUI(totalBalance: Double, totalIncome: Double, totalExpenses: Double, transactionCount: Int) {
+        runOnUiThread {
+            try {
+                val balanceTextView: TextView = findViewById(R.id.tvBalance)
+                val incomeTextView: TextView = findViewById(R.id.tvTotalIncome)
+                val expenseTextView: TextView = findViewById(R.id.tvTotalExpenses)
+
+                // Format currency properly
+                val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
+
+                balanceTextView.text = currencyFormat.format(totalBalance)
+                incomeTextView.text = currencyFormat.format(totalIncome)
+                expenseTextView.text = currencyFormat.format(totalExpenses)
+
+                Log.d("MAIN", "UI Updated - Balance: $${totalBalance}, Income: $${totalIncome}, Expense: $${totalExpenses}, Transactions: $transactionCount")
+            } catch (e: Exception) {
+                Log.e("MAIN", "Error updating UI", e)
+            }
+        }
+    }
+
+    private fun updateUserName() {
+        val userNameTextView: TextView = findViewById(R.id.tvUserName)
+        val currentUser = auth.currentUser
+
+        currentUser?.let { user ->
+            val displayName = user.displayName
+            if (!displayName.isNullOrEmpty()) {
+                userNameTextView.text = "Hello, $displayName"
+            } else {
+                user.email?.let { email ->
+                    val nameFromEmail = email.substringBefore("@")
+                    userNameTextView.text = "Hello, $nameFromEmail"
+                } ?: run {
+                    userNameTextView.text = "Hello, User"
+                }
+            }
+        } ?: run {
+            userNameTextView.text = "Hello, User"
+        }
+    }
+
+    override fun onBackPressed() {
+        moveTaskToBack(true)
     }
 }
