@@ -39,7 +39,10 @@ class AddExpenseActivity : AppCompatActivity() {
         val amountText = binding.etExpenseAmount.text.toString().trim()
         val category = binding.etExpenseCategory.text.toString().trim()
 
-        Log.d("DEBUG", " Expense Form Data - Title: '$title', Amount: '$amountText', Category: '$category'")
+        Log.d(
+            "DEBUG",
+            " Expense Form Data - Title: '$title', Amount: '$amountText', Category: '$category'"
+        )
 
         // Validation
         if (title.isEmpty() || amountText.isEmpty() || category.isEmpty()) {
@@ -78,7 +81,10 @@ class AddExpenseActivity : AppCompatActivity() {
 
         Log.d("DEBUG", " Attempting to save EXPENSE to Firestore...")
 
-        db.collection("expenses")
+        // FIX: Change from "expenses" to "users/{userId}/transactions"
+        db.collection("users")
+            .document(user.uid)
+            .collection("transactions")
             .add(expense)
             .addOnSuccessListener { documentReference ->
                 Log.d("DEBUG", " SUCCESS: Expense saved with ID: ${documentReference.id}")

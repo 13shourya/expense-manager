@@ -1,10 +1,10 @@
 package com.example.budgetmanager
 
+import android.app.DatePickerDialog
+import android.content.Intent
 import android.os.Bundle
-import android.util.Log
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import com.example.budgetmanager.databinding.ActivityAddIncomeBinding
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -13,95 +13,102 @@ import java.util.*
 
 class AddIncomeActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityAddIncomeBinding
-    private lateinit var auth: FirebaseAuth
+    private lateinit var amountEditText: EditText
+    private lateinit var categorySpinner: Spinner
+    private lateinit var dateEditText: EditText
+    private lateinit var descriptionEditText: EditText
+    private lateinit var saveButton: Button
+
     private val db = Firebase.firestore
+    private val userId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityAddIncomeBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        setContentView(R.layout.activity_add_income)
 
-        auth = FirebaseAuth.getInstance()
+        initializeViews()
+        setupDatePicker()
+        setupSpinner()
+        setupSaveButton()
+    }
 
-        // DEBUG: Check if binding works
-        Log.d("INCOME_DEBUG", " AddIncomeActivity started")
+    private fun initializeViews() {
+        // FIXED: Changed eIAmount to etAmount, eIDate to etDate, eIDescription to etDescription
+        amountEditText = findViewById(R.id.etAmount)
+        categorySpinner = findViewById(R.id.spinnerCategory)
+        dateEditText = findViewById(R.id.etDate)
+        descriptionEditText = findViewById(R.id.etDescription)
+        saveButton = findViewById(R.id.btnSaveIncome)
+    }
 
-        binding.btnSaveIncome.setOnClickListener {
-            Log.d("INCOME_DEBUG", " SAVE INCOME BUTTON CLICKED")
-            saveIncome()
+    private fun setupDatePicker() {
+        // Set current date as default
+        dateEditText.setText(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()))
+
+        dateEditText.setOnClickListener {
+            val calendar = Calendar.getInstance()
+            val year = calendar.get(Calendar.YEAR)
+            val month = calendar.get(Calendar.MONTH)
+            val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+            val datePickerDialog = DatePickerDialog(
+                this,
+                { _, selectedYear, selectedMonth, selectedDay ->
+                    val selectedDate = String.format(Locale.getDefault(), "%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay)
+                    dateEditText.setText(selectedDate)
+                },
+                year,
+                month,
+                day
+            )
+            datePickerDialog.show()
         }
+    }
 
-        binding.btnCancel.setOnClickListener {
-            finish()
+    private fun setupSpinner() {
+        val categories = arrayOf("Salary", "Business", "Investment", "Gift", "Other")
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, categories)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        categorySpinner.adapter = adapter
+    }
+
+    private fun setupSaveButton() {
+        saveButton.setOnClickListener {
+            saveIncome()
         }
     }
 
     private fun saveIncome() {
-        // DEBUG: Check if fields exist
-        try {
-            val title = binding.etIncomeTitle.text.toString().trim()
-            val amountText = binding.etIncomeAmount.text.toString().trim()
-            val source = binding.etIncomeSource.text.toString().trim()
+        val amountText = amountEditText.text.toString()
+        val category = categorySpinner.selectedItem.toString()
+        val date = dateEditText.text.toString()
+        val description = descriptionEditText.text.toString()
 
-            Log.d("INCOME_DEBUG", " Income Form Data - Title: '$title', Amount: '$amountText', Source: '$source'")
-
-            // Validation
-            if (title.isEmpty() || amountText.isEmpty() || source.isEmpty()) {
-                Log.e("INCOME_DEBUG", " Income validation failed - empty fields")
-                Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
-                return
-            }
-
-            val amount = amountText.toDoubleOrNull()
-            if (amount == null || amount <= 0) {
-                Log.e("INCOME_DEBUG", " Income validation failed - invalid amount: $amountText")
-                Toast.makeText(this, "Please enter a valid amount", Toast.LENGTH_SHORT).show()
-                return
-            }
-
-            val user = auth.currentUser
-            if (user == null) {
-                Log.e("INCOME_DEBUG", " User not logged in for income")
-                Toast.makeText(this, "User not logged in", Toast.LENGTH_SHORT).show()
-                return
-            }
-
-            Log.d("INCOME_DEBUG", " User is logged in: ${user.uid}")
-
-            val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-
-            Log.d("INCOME_DEBUG", " Creating income object...")
-
-            val income = hashMapOf(
-                "title" to title,
-                "amount" to amount,
-                "source" to source,
-                "date" to date,
-                "userId" to user.uid,
-                "type" to "income",
-                "createdAt" to System.currentTimeMillis()
-            )
-
-            Log.d("INCOME_DEBUG", " Income data: $income")
-            Log.d("INCOME_DEBUG", " Attempting to save INCOME to Firestore...")
-
-            // Save to Firestore
-            db.collection("incomes")
-                .add(income)
-                .addOnSuccessListener { documentReference ->
-                    Log.d("INCOME_DEBUG", " SUCCESS: Income saved with ID: ${documentReference.id}")
-                    Toast.makeText(this, "Income saved successfully!", Toast.LENGTH_SHORT).show()
-                    finish()
-                }
-                .addOnFailureListener { e ->
-                    Log.e("INCOME_DEBUG", " FAILED to save income: ${e.message}")
-                    Toast.makeText(this, "Error saving income: ${e.message}", Toast.LENGTH_LONG).show()
-                }
-
-        } catch (e: Exception) {
-            Log.e("INCOME_DEBUG", " CRASH in saveIncome: ${e.message}")
-            e.printStackTrace()
+        if (amountText.isEmpty() || date.isEmpty()) {
+            Toast.makeText(this, "Please fill amount and date", Toast.LENGTH_SHORT).show()
+            return
         }
+
+        val amount = amountText.toDoubleOrNull() ?: 0.0
+
+        val income = hashMapOf(
+            "type" to "income",
+            "amount" to amount,
+            "category" to category,
+            "date" to date,
+            "description" to description,
+            "createdAt" to System.currentTimeMillis()
+        )
+
+        db.collection("users").document(userId)
+            .collection("transactions")
+            .add(income)
+            .addOnSuccessListener {
+                Toast.makeText(this, "Income added successfully!", Toast.LENGTH_SHORT).show()
+                finish()
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
     }
 }

@@ -8,15 +8,13 @@ import com.example.budgetmanager.databinding.ActivityHistoryBinding
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import java.text.SimpleDateFormat
-import java.util.*
 
 class HistoryActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityHistoryBinding
     private lateinit var auth: FirebaseAuth
     private val db = Firebase.firestore
-    private val transactionsList = mutableListOf<TransactionItem>()
+    private val transactionsList = mutableListOf<Transaction>() // Changed to Transaction
     private lateinit var adapter: TransactionAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,7 +25,7 @@ class HistoryActivity : AppCompatActivity() {
         auth = FirebaseAuth.getInstance()
 
         // Setup RecyclerView
-        adapter = TransactionAdapter(transactionsList)
+        adapter = TransactionAdapter(transactionsList) // Now both use Transaction
         binding.rvTransactions.layoutManager = LinearLayoutManager(this)
         binding.rvTransactions.adapter = adapter
 
@@ -48,7 +46,7 @@ class HistoryActivity : AppCompatActivity() {
 
         val userId = user.uid
 
-        Log.d("HISTORY", " Loading history for user: $userId")
+        Log.d("HISTORY", "Loading history for user: $userId")
 
         // Clear previous data
         transactionsList.clear()
@@ -58,7 +56,7 @@ class HistoryActivity : AppCompatActivity() {
             .whereEqualTo("userId", userId)
             .get()
             .addOnSuccessListener { expensesSnapshot ->
-                Log.d("HISTORY", " Found ${expensesSnapshot.size()} expenses")
+                Log.d("HISTORY", "Found ${expensesSnapshot.size()} expenses")
 
                 for (document in expensesSnapshot) {
                     val title = document.getString("title") ?: ""
@@ -66,11 +64,13 @@ class HistoryActivity : AppCompatActivity() {
                     val category = document.getString("category") ?: ""
                     val date = document.getString("date") ?: "Unknown Date"
 
-                    transactionsList.add(TransactionItem(
-                        description = "$title ($category)",
+                    transactionsList.add(Transaction(
+                        id = document.id,
+                        type = "Expense",
                         amount = -amount, // Negative for expenses
+                        category = category,
                         date = date,
-                        type = "Expense"
+                        description = title
                     ))
                 }
 
@@ -79,7 +79,7 @@ class HistoryActivity : AppCompatActivity() {
                     .whereEqualTo("userId", userId)
                     .get()
                     .addOnSuccessListener { incomesSnapshot ->
-                        Log.d("HISTORY", " Found ${incomesSnapshot.size()} incomes")
+                        Log.d("HISTORY", "Found ${incomesSnapshot.size()} incomes")
 
                         for (document in incomesSnapshot) {
                             val title = document.getString("title") ?: ""
@@ -87,29 +87,31 @@ class HistoryActivity : AppCompatActivity() {
                             val source = document.getString("source") ?: ""
                             val date = document.getString("date") ?: "Unknown Date"
 
-                            transactionsList.add(TransactionItem(
-                                description = "$title ($source)",
+                            transactionsList.add(Transaction(
+                                id = document.id,
+                                type = "Income",
                                 amount = amount, // Positive for income
+                                category = source,
                                 date = date,
-                                type = "Income"
+                                description = title
                             ))
                         }
 
                         // Sort by date (newest first)
                         transactionsList.sortByDescending { it.date }
 
-                        Log.d("HISTORY", " Total transactions loaded: ${transactionsList.size}")
+                        Log.d("HISTORY", "Total transactions loaded: ${transactionsList.size}")
 
                         // Update UI
                         updateUI()
                     }
                     .addOnFailureListener { e ->
-                        Log.e("HISTORY", " Failed to load incomes: ${e.message}")
+                        Log.e("HISTORY", "Failed to load incomes: ${e.message}")
                         updateUI()
                     }
             }
             .addOnFailureListener { e ->
-                Log.e("HISTORY", " Failed to load expenses: ${e.message}")
+                Log.e("HISTORY", "Failed to load expenses: ${e.message}")
                 updateUI()
             }
     }
@@ -121,7 +123,7 @@ class HistoryActivity : AppCompatActivity() {
         } else {
             binding.tvEmptyState.visibility = android.view.View.GONE
             binding.rvTransactions.visibility = android.view.View.VISIBLE
-            adapter.updateTransactions(transactionsList)
+            adapter.notifyDataSetChanged()
         }
     }
 }

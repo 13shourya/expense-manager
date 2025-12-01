@@ -1,20 +1,21 @@
 package com.example.budgetmanager
 
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
-class TransactionAdapter(private var transactions: List<TransactionItem>) :
+class TransactionAdapter(private val transactions: List<Transaction>) :
     RecyclerView.Adapter<TransactionAdapter.TransactionViewHolder>() {
 
     class TransactionViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val tvDescription: TextView = itemView.findViewById(R.id.tvDescription)
-        val tvAmount: TextView = itemView.findViewById(R.id.tvAmount)
-        val tvDate: TextView = itemView.findViewById(R.id.tvDate)
-        val tvType: TextView = itemView.findViewById(R.id.tvType)
+        // Use the actual IDs from your existing item_transaction.xml layout
+        val descriptionTextView: TextView = itemView.findViewById(R.id.tvDescription)
+        val amountTextView: TextView = itemView.findViewById(R.id.tvAmount)
+        val categoryTextView: TextView = itemView.findViewById(R.id.tvCategory)
+        val dateTextView: TextView = itemView.findViewById(R.id.tvDate)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TransactionViewHolder {
@@ -26,30 +27,22 @@ class TransactionAdapter(private var transactions: List<TransactionItem>) :
     override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) {
         val transaction = transactions[position]
 
-        holder.tvDescription.text = transaction.description
-        holder.tvDate.text = transaction.date
-        holder.tvType.text = transaction.type
+        // Use description instead of title
+        holder.descriptionTextView.text = transaction.description
+        holder.categoryTextView.text = transaction.category
+        holder.dateTextView.text = transaction.date
 
         // Set amount with color coding
-        if (transaction.amount < 0) {
-            // Expense - red color
-            holder.tvAmount.text = "-$${String.format("%.2f", -transaction.amount)}"
-            holder.tvAmount.setTextColor(ContextCompat.getColor(holder.itemView.context, android.R.color.holo_red_dark))
-            holder.tvType.setTextColor(ContextCompat.getColor(holder.itemView.context, android.R.color.holo_red_dark))
+        if (transaction.type == "income") {
+            holder.amountTextView.text = "+₹${transaction.amount}"
+            holder.amountTextView.setTextColor(Color.GREEN)
         } else {
-            // Income - green color
-            holder.tvAmount.text = "+$${String.format("%.2f", transaction.amount)}"
-            holder.tvAmount.setTextColor(ContextCompat.getColor(holder.itemView.context, android.R.color.holo_green_dark))
-            holder.tvType.setTextColor(ContextCompat.getColor(holder.itemView.context, android.R.color.holo_green_dark))
+            holder.amountTextView.text = "-₹${transaction.amount}"
+            holder.amountTextView.setTextColor(Color.RED)
         }
     }
 
     override fun getItemCount(): Int {
         return transactions.size
-    }
-
-    fun updateTransactions(newTransactions: List<TransactionItem>) {
-        this.transactions = newTransactions
-        notifyDataSetChanged()
     }
 }
